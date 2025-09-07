@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>3AI</title>
+	<link rel="stylesheet" href="/web/style.css">
+</head>
+
+<body>
+	<div class="container">
+		<h2>3AI</h2>
+		<br>
+		<form id="ocrForm">
+			<div class="form-row" style="justify-content: flex-start; gap: 16px; align-items: center;">
+				<label>Output Options:</label>
+				<label><input type="checkbox" id="returnVis" name="return_vis" checked> Visual</label>
+				<label><input type="checkbox" id="returnJson" name="return_json"> JSON</label>
+				<label><input type="checkbox" id="returnMarkdown" name="return_markdown"> Markdown</label>
+				<button type="button" id="clearBtn">Clear</button>
+			</div>
+			<div class="form-row">
+				<div id="dropZone" class="drop-zone">Only one image file is supported</div>
+				<input id="fileInput" type="file" name="files" multiple accept="image/*,.pdf" />
+			</div>
+			<div class="form-row button-row">
+				<button type="submit">OCR</button>
+			</div>
+		</form>
+		<div id="previewArea"></div>
+		<div id="imgModal" class="modal" style="display:none;position:fixed;z-index:99999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;">
+			<span id="closeModal" style="position:absolute;top:32px;right:48px;font-size:2.5rem;color:#fff;cursor:pointer;font-weight:bold;">&times;</span>
+			<img id="modalImg" src="" alt="Preview" style="max-width:80vw;max-height:80vh;border-radius:12px;box-shadow:0 2px 16px #7b8cff55;">
+		</div>
+		<div id="progressArea">
+			<div id="progressText"></div>
+			<div class="progress-bar-bg">
+				<div class="progress-bar" id="progressBar"></div>
+			</div>
+			<div id="elapsedTime"></div>
+		</div>
+		<div id="loading">Recognizing, please wait...</div>
+		<div id="resultArea"></div>
+	</div>
+	<div id="globalTip"
+		style="display:none;position:fixed;top:32px;right:32px;z-index:9999;min-width:120px;padding:12px 28px;background:#7b8cff;color:#fff;border-radius:8px;box-shadow:0 2px 8px #7b8cff22;font-size:1.08rem;transition:opacity 0.3s;opacity:0;">
+	</div>
+	<script>
+		const dropZone = document.getElementById('dropZone');
+		const fileInput = document.getElementById('fileInput');
+		const ocrForm = document.getElementById('ocrForm');
+		const resultArea = document.getElementById('resultArea');
+		const loading = document.getElementById('loading');
+		const clearBtn = document.getElementById('clearBtn');
+		const progressArea = document.getElementById('progressArea');
+		const progressBar = document.getElementById('progressBar');
+		const progressText = document.getElementById('progressText');
+		const elapsedTime = document.getElementById('elapsedTime');
+
+		['dragenter', 'dragover'].forEach(evt => dropZone.addEventListener(evt, e => {
+			e.preventDefault();
+			dropZone.classList.add('dragover');
+		}));
+		['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, e => {
+			e.preventDefault();
+			dropZone.classList.remove('dragover');
+		}));
+		dropZone.addEventListener('click', () => fileInput.click());
+		dropZone.addEventListener('drop', e => {
+			fileInput.files = e.dataTransfer.files;
+		});
+fileInput.addEventListener('change', function() {
+	const previewArea = document.getElementById('previewArea');
+	previewArea.innerHTML = '';
+	if (fileInput.files.length > 0 && fileInput.files[0].type.startsWith('image/')) {
+		const file = fileInput.files[0];
+		const url = URL.createObjectURL(file);
+		previewArea.innerHTML = `<img src="${url}" alt="Preview" id="previewThumb" style="max-width:180px;max-height:180px;border-radius:8px;box-shadow:0 2px 8px #7b8cff22;cursor:pointer;">`;
+		document.getElementById('previewThumb').onclick = function() {
+			document.getElementById('modalImg').src = url;
+			document.getElementById('imgModal').style.display = 'flex';
+		};
+	}
+	// Modal close logic
+	document.getElementById('closeModal').onclick = function() {
+		document.getElementById('imgModal').style.display = 'none';
+		document.getElementById('modalImg').src = '';
+	};
+	// ESC key closes modal
+	document.addEventListener('keydown', function(e) {
+		if (e.key === 'Escape') {
+			document.getElementById('imgModal').style.display = 'none';
+			document.getElementById('modalImg').src = '';
+		}
+	});
+});
+
+		ocrForm.addEventListener('submit', async function (e) {
+			e.preventDefault();
+			if (!fileInput.files.length) {
+				alert('Please select an image file first');
+				return;
+			}
+			loading.style.display = 'none';
+			resultArea.innerHTML = '';
+			previewArea.innerHTML = '';
+			progressArea.style.display = 'flex';
+			progressBar.style.width = '0%';
+			progressText.textContent = 'Preparing for recognition...';
+			elapsedTime.textContent = '';
+			const startTime = Date.now();
+			const formData = new FormData();
+			if (fileInput.files.length > 0) {
+				formData.append('file', fileInput.files[0]);
+			}
+			formData.append('return_vis', document.getElementById('returnVis').checked);
+			formData.append('return_json', document.getElementById('returnJson').checked);
+			formData.append('return_markdown', document.getElementById('returnMarkdown').checked);
+			const imageFileMap = {};
+			for (const file of fileInput.files) {
+				if (file.type.startsWith('image/')) {
+					const base = file.name.replace(/\.[^.]+$/, '');
+					imageFileMap[base] = file;
+				}
+			}
+			try {
+				let fakeProgress = 0;
+				const fakeTimer = setInterval(() => {
+					if (fakeProgress < 80) {
+						fakeProgress += Math.random() * 8 + 2;
+						progressBar.style.width = Math.min(fakeProgress, 80) + '%';
+						progressText.textContent = 'Processing file...';
+					}
+				}, 300);
+				const resp = await fetch('/ocr', { method: 'POST', body: formData });
+				clearInterval(fakeTimer);
+				progressBar.style.width = '100%';
+				progressText.textContent = 'Recognition complete';
+				const data = await resp.json();
+				const hasResult = data.vis_img_path || data.json || data.markdown;
+				if (!hasResult) {
+					progressArea.style.display = 'none';
+					resultArea.innerHTML = `<div style='color:red;'>Recognition failed: ${data.msg || ''}</div>`;
+					return;
+				}
+				previewArea.innerHTML = '';
+				resultArea.innerHTML = '';
+				if (data.vis_img_path) {
+					const imgDiv = document.createElement('div');
+					imgDiv.className = 'result-block';
+					imgDiv.innerHTML = `<img src="${data.vis_img_path}" alt="Visual Result" id="resultThumb" style="max-width:180px;max-height:180px;border-radius:8px;box-shadow:0 2px 8px #7b8cff22;cursor:pointer;">`;
+					resultArea.appendChild(imgDiv);
+					document.getElementById('resultThumb').onclick = function() {
+						document.getElementById('modalImg').src = data.vis_img_path;
+						document.getElementById('imgModal').style.display = 'flex';
+					};
+				}
+				if (data.json) {
+					const jsonDiv = document.createElement('div');
+					jsonDiv.className = 'result-block';
+					jsonDiv.innerHTML = `<div class="ocr-text-content"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><b>JSON Result</b><button class="copy-btn" title="Copy JSON">Copy</button></div><pre>${data.json}</pre></div>`;
+					resultArea.appendChild(jsonDiv);
+				}
+				if (data.markdown) {
+					const mdDiv = document.createElement('div');
+					mdDiv.className = 'result-block';
+					mdDiv.innerHTML = `<div class="ocr-text-content"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><b>Markdown Result</b><button class="copy-btn" title="Copy Markdown">Copy</button></div><pre>${data.markdown}</pre></div>`;
+					resultArea.appendChild(mdDiv);
+				}
+				resultArea.addEventListener('click', function (e) {
+					if (e.target.closest('.copy-btn')) {
+						const btn = e.target.closest('.copy-btn');
+						const pre = btn.closest('.ocr-text-content').querySelector('pre');
+						if (pre) {
+							navigator.clipboard.writeText(pre.textContent).then(() => {
+								showTip('Copied!');
+							}).catch(() => {
+								showTip('Copy failed, please copy manually', '#f87171');
+							});
+						}
+					}
+				});
+				const used = ((Date.now() - startTime) / 1000).toFixed(2);
+				elapsedTime.textContent = `Total time: ${used} seconds`;
+			} catch (err) {
+				progressArea.style.display = 'none';
+				resultArea.innerHTML = `<div style='color:red;'>Request failed: ${err}</div>`;
+			}
+		});
+
+		clearBtn.addEventListener('click', function () {
+			fileInput.value = '';
+			resultArea.innerHTML = '';
+			previewArea.innerHTML = '';
+			progressArea.style.display = 'none';
+			progressBar.style.width = '0%';
+			progressText.textContent = '';
+			elapsedTime.textContent = '';
+		});
+
+		function showTip(msg, color = '#7b8cff') {
+			const tip = document.getElementById('globalTip');
+			tip.textContent = msg;
+			tip.style.background = color;
+			tip.style.display = 'block';
+			tip.style.opacity = '1';
+			clearTimeout(tip._timer);
+			tip._timer = setTimeout(() => {
+				tip.style.opacity = '0';
+				setTimeout(() => { tip.style.display = 'none'; }, 400);
+			}, 1500);
+		}
+
+	</script>
+</body>
+
+</html>
