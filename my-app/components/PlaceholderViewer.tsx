@@ -17,37 +17,47 @@ const PlaceholderViewer: React.FC<PlaceholderViewerProps> = ({ onUploadClick }) 
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '40px'
+            background: '#0D1116',
+            padding: '40px',
+            borderRadius: '6px'
         }}>
-            <Card
-                style={{
-                    textAlign: 'center',
-                    borderRadius: '6px',
-                    maxWidth: '400px',
-                    width: '100%'
-                }}
-            >
-                <Space direction="vertical" size={32} style={{ width: '100%' }}>
-                    <Image
-                        src="/QR_Code.png"
-                        alt="QR Code"
-                        style={{
-                            width: '200px',
-                            height: '200px',
-                            borderRadius: '8px'
-                        }}
-                    />
+            <Space direction="vertical" size={32} style={{ width: '100%', textAlign: 'center' }}>
+                    <div style={{
+                        padding: '20px 20px 0px 20px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <img 
+                            src="/25579720acb4.svg" 
+                            alt="GitHub Octocat" 
+                            style={{
+                                width: '700px',
+                                height: 'auto'
+                            }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Image
+                            src="/QR_Code.png"
+                            alt="QR Code"
+                            style={{
+                                width: '200px',
+                                height: '200px',
+                                borderRadius: '8px'
+                            }}
+                        />
+                    </div>
                     
-                    <div>
+                    <div style={{ textAlign: 'center' }}>
                         <Text style={{ 
                             fontSize: '12px', 
                             color: '#999'
                         }}>
-                            Thank you for visiting our Smart Form Rebuild system.
+                            Thank you for visiting our 3Ai92 system.
                         </Text>
                     </div>
                 </Space>
-            </Card>
         </div>
     );
 };

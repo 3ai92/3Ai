@@ -12,7 +12,7 @@ interface SidebarHeaderProps {
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({ collapsed, onToggle }) => {
     return (
         <div style={{
-            height: 64,
+            height: 50,
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'space-between',
@@ -22,7 +22,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ collapsed, onToggle }) =>
         }}>
             {!collapsed && (
                 <span style={{ color: 'white', fontWeight: 600, fontSize: 16 }}>
-                    Tools
+                    ツール_3Ai92
                 </span>
             )}
             <Button
