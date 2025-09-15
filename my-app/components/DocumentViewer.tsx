@@ -126,9 +126,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     bbox: rotateBbox(el.bbox, currentPage.pageSize, currentPage.rotation),
   })) || [];
 
+  const aspectRatio = currentPage?.pageSize?.width && currentPage?.pageSize?.height
+    ? currentPage.pageSize.width / currentPage.pageSize.height
+    : 1;
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <DocumentFrame>
+      <DocumentFrame
+        width={`${renderSize.width}px`}
+        height={`${renderSize.height}px`}
+        aspectRatio={aspectRatio}
+      >
         <BackgroundLayer
           imageUrl={currentPage.imageUrl}
           pdfUrl={currentPage.pdfUrl}
@@ -150,6 +158,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           offsetY={scaleInfo.offsetY}
           viewportWidth={renderSize.width}
           viewportHeight={renderSize.height}
+          pageSize={currentPage.pageSize}
           onChange={handleInputChange}
         />
       </DocumentFrame>

@@ -14,6 +14,8 @@ from rapidocr.utils.to_markdown import to_markdown
 from rapidocr.utils import VisRes
 import cv2
 import os
+import json
+import time
 
 app = FastAPI()
 app.add_middleware(
@@ -70,6 +72,58 @@ async def ocr_api(
         cv2.imwrite(str(vis_path), vis_img)
         output["vis_img_path"] = f"/output/{vis_path.name}"
     return JSONResponse(content=output)
+
+
+@app.post("/upload")
+async def upload_file_api(file: UploadFile = File(...)):
+    file_id = str(uuid.uuid4())
+    ext = Path(file.filename).suffix or ".png"
+    save_path = OUTPUT_DIR / f"{file_id}{ext}"
+    with save_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    img = cv2.imread(str(save_path))
+    if img is not None:
+        height, width = img.shape[:2]
+    else:
+        width, height = 1000, 1400 
+
+    result = ocr_engine(str(save_path))
+
+    if not hasattr(result, "boxes") or result.boxes is None or not hasattr(result, "txts") or result.txts is None or not hasattr(result, "scores") or result.scores is None:
+        ocr_data = []
+    else:
+        json_str = to_json(result)
+        ocr_data = json.loads(json_str)
+
+    document_id = f"doc_{int(time.time())}_{file_id[:8]}"
+    page = {
+        "pageIndex": 0,
+        "pageSize": {"width": width, "height": height},
+        "dpi": 300,
+        "rotation": 0,
+        "elements": [
+            {
+                "id": f"el_{i}",
+                "role": "field",
+                "type": "text",
+                "bbox": [
+                    int(min(pt[0] for pt in item["box"])),
+                    int(min(pt[1] for pt in item["box"])),
+                    int(max(pt[0] for pt in item["box"])),
+                    int(max(pt[1] for pt in item["box"]))
+                ] if "box" in item else [0, 0, 0, 0],
+                "text": item.get("txt", ""),
+                "confidence": item.get("score", 1.0)
+            }
+            for i, item in enumerate(ocr_data)
+        ]
+    }
+    data = {
+        "documentId": document_id,
+        "pages": [page]
+    }
+    return JSONResponse(content={"success": True, "data": data})
 
 
 @app.get("/")

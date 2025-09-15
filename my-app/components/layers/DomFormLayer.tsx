@@ -14,6 +14,7 @@ interface DomFormLayerProps {
     viewportHeight: number;
     onChange: (id: string, value: any) => void;
     style?: React.CSSProperties;
+    pageSize?: { width: number; height: number };
 }
 
 const DomFormLayer: React.FC<DomFormLayerProps> = ({
@@ -25,13 +26,32 @@ const DomFormLayer: React.FC<DomFormLayerProps> = ({
     viewportHeight,
     onChange,
     style,
+    pageSize,
 }) => {
     const renderElement = (el: Element) => {
         const [x1, y1, x2, y2] = el.bbox;
-        const viewX = x1 * scale + offsetX;
-        const viewY = y1 * scale + offsetY;
-        const viewW = (x2 - x1) * scale;
-        const viewH = (y2 - y1) * scale;
+
+        let viewX = x1 * scale + offsetX;
+        let viewY = y1 * scale + offsetY;
+        let viewW = (x2 - x1) * scale;
+        let viewH = (y2 - y1) * scale;
+
+        if (pageSize) {
+            const relX = x1 / pageSize.width;
+            const relY = y1 / pageSize.height;
+            const relW = (x2 - x1) / pageSize.width;
+            const relH = (y2 - y1) / pageSize.height;
+            viewX = relX * viewportWidth;
+            viewY = relY * viewportHeight;
+            viewW = relW * viewportWidth;
+            viewH = relH * viewportHeight;
+        }
+
+        const safe = (v: number) => Math.max(0, Number.isFinite(v) ? v : 0);
+        viewX = safe(viewX);
+        viewY = safe(viewY);
+        viewW = safe(viewW);
+        viewH = safe(viewH);
 
         const elementStyle = {
             position: 'absolute' as const,
@@ -126,6 +146,7 @@ const DomFormLayer: React.FC<DomFormLayerProps> = ({
                         element={el}
                         onChange={handleChange}
                         position={{ x: viewX, y: viewY, width: viewW, height: viewH }}
+                        pageSize={pageSize}
                     />
                 );
 
@@ -136,6 +157,7 @@ const DomFormLayer: React.FC<DomFormLayerProps> = ({
                         element={el}
                         onChange={handleChange}
                         position={{ x: viewX, y: viewY, width: viewW, height: viewH }}
+                        pageSize={pageSize}
                     />
                 );
 
@@ -146,6 +168,7 @@ const DomFormLayer: React.FC<DomFormLayerProps> = ({
                         element={el}
                         onChange={handleChange}
                         position={{ x: viewX, y: viewY, width: viewW, height: viewH }}
+                        pageSize={pageSize}
                     />
                 );
 
@@ -156,6 +179,7 @@ const DomFormLayer: React.FC<DomFormLayerProps> = ({
                         element={el}
                         onChange={handleChange}
                         position={{ x: viewX, y: viewY, width: viewW, height: viewH }}
+                        pageSize={pageSize}
                     />
                 );
 
